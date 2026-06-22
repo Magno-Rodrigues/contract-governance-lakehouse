@@ -1,0 +1,29 @@
+FROM python:3.8-slim
+
+USER root
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    default-jdk \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYSPARK_PYTHON=python
+ENV PYSPARK_DRIVER_PYTHON=python
+
+COPY requirements.txt /app/requirements.txt
+
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements.txt
+
+RUN mkdir -p /opt/spark/jars_extra && \
+    wget -P /opt/spark/jars_extra \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && \
+    wget -P /opt/spark/jars_extra \
+    https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+
+ENV SPARK_EXTRA_CLASSPATH="/opt/spark/jars_extra/*"

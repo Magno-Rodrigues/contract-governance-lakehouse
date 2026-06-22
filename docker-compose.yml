@@ -1,0 +1,82 @@
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-07-16T23-46-41Z
+    container_name: contract_minio
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - contract_lakehouse_net
+
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contract_spark_master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      - PYSPARK_PYTHON=/usr/bin/python3
+      - PYSPARK_DRIVER_PYTHON=/usr/bin/python3
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/jars_extra/*
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    networks:
+      - contract_lakehouse_net
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contract_spark_worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - PYSPARK_PYTHON=/usr/bin/python3
+      - PYSPARK_DRIVER_PYTHON=/usr/bin/python3
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/jars_extra/*
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+    networks:
+      - contract_lakehouse_net
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
+    container_name: contract_jupyter
+    command: >
+      bash -c "jupyter notebook
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --NotebookApp.token=''
+      --NotebookApp.password=''
+      --allow-root"
+    env_file:
+      - .env
+    environment:
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/jars_extra/*
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    depends_on:
+      - minio
+      - spark-master
+      - spark-worker
+    networks:
+      - contract_lakehouse_net
+
+volumes:
+  minio_data:
+
+networks:
+  contract_lakehouse_net:
+    driver: bridge

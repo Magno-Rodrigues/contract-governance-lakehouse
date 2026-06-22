@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/raw_local/
+data/*.csv
+data/*.parquet
+*.duckdb
+data/raw_local/
+data/landing_metadata.csv
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
