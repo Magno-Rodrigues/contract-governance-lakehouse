@@ -1,49 +1,36 @@
 from abc import ABC, abstractmethod
-from pyspark.sql import SparkSession, DataFrame
+import pandas as pd
 
 
 class BaseReader(ABC):
     """
-    Classe abstrata base para todos os readers da Bronze Layer.
+    Interface base para todos os Readers.
 
-    Objetivo:
-    --------
-    Garantir que qualquer fonte de dados implementada
-    siga a mesma interface de leitura.
+    Responsabilidade:
+    -----------------
+    Ler a fonte e retornar Pandas DataFrame.
 
-    Isso permite que o pipeline Bronze seja desacoplado
-    do tipo específico da fonte.
+    Readers NÃO conhecem Spark.
 
-    Exemplos de implementações futuras:
-        - CSVReader
-        - ExcelReader
-        - XLSBReader
-        - APIReader
-        - SAPReader
-        - PostgresReader
-        - SFTPReader
+    Spark entra apenas na camada de conversão.
     """
 
     @abstractmethod
     def read(
         self,
-        spark: SparkSession,
         source_path: str
-    ) -> DataFrame:
+    ) -> pd.DataFrame:
         """
-        Método obrigatório que cada reader deve implementar.
+        Lê a fonte e retorna Pandas DataFrame.
 
         Parameters
         ----------
-        spark : SparkSession
-            Sessão Spark ativa.
-
         source_path : str
-            Caminho da origem de dados.
+            Caminho da fonte de dados.
 
         Returns
         -------
-        DataFrame
-            Spark DataFrame contendo os dados lidos.
+        pd.DataFrame
+            Dados carregados.
         """
         pass

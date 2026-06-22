@@ -1,55 +1,51 @@
-from pathlib import Path
+from src.bronze.readers.file.csv_reader import CSVReader
 
 
 class ReaderRegistry:
     """
-    Registry responsável por decidir qual Reader
-    será usado para cada tipo de fonte.
+    Registry responsável por resolver
+    Readers de acordo com o source_type.
 
-    O objetivo é desacoplar o pipeline Bronze
-    dos formatos específicos de dados.
+    Registry NÃO faz descoberta.
 
-    O pipeline nunca chama CSVReader diretamente.
-
-    Ele pergunta ao Registry:
-        'qual reader deve processar este arquivo?'
+    Apenas resolve implementação.
     """
 
-    # Mapeamento inicial de extensões para readers.
-    # Futuramente isso pode ser movido para catálogo externo.
     READER_MAPPING = {
-        ".csv": "CSVReader",
-        ".xlsx": "ExcelReader",
-        ".xlsb": "XLSBReader",
-        ".json": "JSONReader",
-        ".parquet": "ParquetReader"
+        "csv": CSVReader,
+
+        # futuro
+        "xlsx": None,
+        "xlsb": None,
+        "json": None,
+        "parquet": None,
+
+        "api": None,
+        "postgres": None,
+        "oracle": None,
+        "sap": None,
+        "sftp": None
     }
 
     @classmethod
-    def get_reader_name(
+    def get_reader(
         cls,
-        source_file: str
-    ) -> str:
+        source_type: str
+    ):
         """
-        Retorna o nome do Reader apropriado
-        baseado na extensão do arquivo.
-
-        Parameters
-        ----------
-        source_file : str
-            Nome do arquivo de origem.
-
-        Returns
-        -------
-        str
-            Nome do reader responsável.
+        Resolve reader apropriado.
         """
 
-        file_extension = Path(source_file).suffix.lower()
-
-        if file_extension not in cls.READER_MAPPING:
+        if source_type not in cls.READER_MAPPING:
             raise ValueError(
-                f"Nenhum reader registrado para extensão: {file_extension}"
+                f"Reader não encontrado para: {source_type}"
             )
 
-        return cls.READER_MAPPING[file_extension]
+        reader_class = cls.READER_MAPPING[source_type]
+
+        if reader_class is None:
+            raise NotImplementedError(
+                f"Reader {source_type} ainda não implementado."
+            )
+
+        return reader_class

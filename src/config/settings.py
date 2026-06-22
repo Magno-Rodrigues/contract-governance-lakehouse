@@ -1,24 +1,43 @@
-from pathlib import Path
 import os
 
 
-# Diretório raiz do projeto dentro do container.
-PROJECT_ROOT = Path("/app")
+class Settings:
+    """
+    Centraliza configurações globais do projeto.
 
-# Caminho local onde os snapshots RAW ficam montados.
-RAW_LOCAL_PATH = PROJECT_ROOT / "data" / "raw_local" / "RAW"
+    Nenhuma configuração de ambiente deve ficar hardcoded
+    em notebooks ou pipelines.
+    """
 
-# Configurações do MinIO/S3 compatível.
-MINIO_ENDPOINT = os.getenv("S3_ENDPOINT", "http://minio:9000")
-MINIO_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "admin")
-MINIO_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "admin12345")
-MINIO_REGION = os.getenv("AWS_REGION", "us-east-1")
+    # MinIO / S3
+    MINIO_ENDPOINT = os.getenv(
+        "S3_ENDPOINT",
+        "http://minio:9000"
+    )
 
-# Bucket principal do lakehouse.
-BUCKET_NAME = os.getenv("MINIO_BUCKET", "contracts")
+    AWS_ACCESS_KEY = os.getenv(
+        "AWS_ACCESS_KEY_ID",
+        "admin"
+    )
 
-# Prefixos das camadas no object storage.
-LANDING_PREFIX = "landing"
+    AWS_SECRET_KEY = os.getenv(
+        "AWS_SECRET_ACCESS_KEY",
+        "admin12345"
+    )
 
-# Caminho local para salvar metadados da Landing.
-LANDING_METADATA_PATH = PROJECT_ROOT / "data" / "landing_metadata.csv"
+    # Spark
+    SPARK_MASTER_URL = os.getenv(
+        "SPARK_MASTER_URL",
+        "spark://spark-master:7077"
+    )
+
+    SPARK_EXTRA_JARS = (
+        "/opt/spark/jars_extra/"
+        "hadoop-aws-3.3.4.jar,"
+        "/opt/spark/jars_extra/"
+        "aws-java-sdk-bundle-1.12.262.jar"
+    )
+
+    # Storage
+    BUCKET_NAME = "contracts"
+    BRONZE_PIPELINE_VERSION = "bronze_v1"
