@@ -41,6 +41,7 @@ class CSVReader(BaseReader):
                     dtype=str,
                     sep=None,
                     engine="python",
+                    on_bad_lines="warn",
                 )
                 break
 
@@ -55,7 +56,7 @@ class CSVReader(BaseReader):
             )
 
         df = DataCleaner.remove_empty_rows(df)
-        df = DataCleaner.fix_duplicate_columns(df)
         df = DataCleaner.normalize_columns(df)
+        df = DataCleaner.fix_duplicate_columns(df)
 
         return df
