@@ -70,6 +70,18 @@ class SparkFactory:
                 "spark.hadoop.fs.s3a.impl",
                 "org.apache.hadoop.fs.s3a.S3AFileSystem"
             )
+            
+            .config(
+                "spark.cores.max", "1"
+            )
+            
+            .config(
+                "spark.executor.cores", "1"
+            )
+            
+            .config(
+                "spark.executor.memory", "1g"
+            )
 
             .getOrCreate()
         )

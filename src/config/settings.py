@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 
 class Settings:
@@ -8,6 +9,11 @@ class Settings:
     Nenhuma configuração de ambiente deve ficar hardcoded
     em notebooks ou pipelines.
     """
+
+    # Project paths
+    PROJECT_ROOT = Path("/app")
+    RAW_LOCAL_PATH = PROJECT_ROOT / "data" / "raw_local" / "RAW"
+    LANDING_METADATA_PATH = PROJECT_ROOT / "data" / "landing_metadata.csv"
 
     # MinIO / S3
     MINIO_ENDPOINT = os.getenv(
@@ -25,6 +31,11 @@ class Settings:
         "admin12345"
     )
 
+    AWS_REGION = os.getenv(
+        "AWS_REGION",
+        "us-east-1"
+    )
+
     # Spark
     SPARK_MASTER_URL = os.getenv(
         "SPARK_MASTER_URL",
@@ -39,5 +50,14 @@ class Settings:
     )
 
     # Storage
-    BUCKET_NAME = "contracts"
+    BUCKET_NAME = os.getenv(
+        "MINIO_BUCKET",
+        "contracts"
+    )
+
+    # Lakehouse prefixes
+    LANDING_PREFIX = "landing"
+    BRONZE_PREFIX = "bronze"
+
+    # Pipeline versions
     BRONZE_PIPELINE_VERSION = "bronze_v1"
