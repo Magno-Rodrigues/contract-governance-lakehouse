@@ -14,6 +14,11 @@ class Settings:
     PROJECT_ROOT = Path("/app")
     RAW_LOCAL_PATH = PROJECT_ROOT / "data" / "raw_local" / "RAW"
     LANDING_METADATA_PATH = PROJECT_ROOT / "data" / "landing_metadata.csv"
+    
+    # Bronze logs
+    BRONZE_EXECUTION_LOG_PATH = (
+    PROJECT_ROOT / "data" / "bronze_execution_log.csv"
+    )
 
     # MinIO / S3
     MINIO_ENDPOINT = os.getenv(
