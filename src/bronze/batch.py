@@ -6,6 +6,7 @@ from src.config.settings import Settings
 from src.bronze.catalog import BronzeCatalog
 from src.bronze.pipeline import BronzePipeline
 from src.bronze.execution_logger import BronzeExecutionLogger
+from src.bronze.quality_logger import BronzeQualityLogger
 
 
 def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
@@ -27,6 +28,7 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
     pipeline = BronzePipeline()
 
     results = []
+    quality_records = []
 
     for _, row in landing_metadata_df.iterrows():
         start_time = datetime.now(timezone.utc)
@@ -78,6 +80,24 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
 
             end_time = datetime.now(timezone.utc)
 
+            
+            if source_file == "Relatorio_geral_irregularidades.csv":
+                quality_records.append(
+                    BronzeQualityLogger.build_record(
+                        source_file=source_file,
+                        snapshot_date=snapshot_date,
+                        source_path=row["source_path"],
+                        issue_type="BAD_CSV_LINE_SKIPPED",
+                        issue_description=(
+                            "CSV contained at least one malformed line skipped by pandas "
+                            "during Bronze ingestion. Current known case: line 479."
+                        ),
+                        line_number=479,
+                        severity="WARNING",
+                    )
+            )
+            
+
             results.append(
                 BronzeExecutionLogger.build_execution_record(
                     execution_id=execution_id,
@@ -116,5 +136,6 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
     current_run_df = pd.DataFrame(results)
 
     BronzeExecutionLogger.append_execution_log(current_run_df)
+    BronzeQualityLogger.append_quality_log(quality_records)
 
     return current_run_df

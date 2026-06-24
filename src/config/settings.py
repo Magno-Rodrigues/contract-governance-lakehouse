@@ -59,6 +59,10 @@ class Settings:
         "MINIO_BUCKET",
         "contracts"
     )
+    
+    BRONZE_QUALITY_LOG_PATH = (
+    PROJECT_ROOT / "data" / "bronze_quality_log.csv"
+    )
 
     # Lakehouse prefixes
     LANDING_PREFIX = "landing"
