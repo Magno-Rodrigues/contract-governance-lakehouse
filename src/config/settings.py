@@ -74,3 +74,8 @@ class Settings:
     # Pipeline retries
     BRONZE_MAX_RETRIES = 3
     BRONZE_RETRY_DELAY_SECONDS = 2
+    
+    # Beonze processed manifest
+    BRONZE_PROCESSED_MANIFEST_PATH = (
+    PROJECT_ROOT / "data" / "bronze_processed_manifest.csv"
+    )

@@ -8,7 +8,10 @@ from src.bronze.pipeline import BronzePipeline
 from src.bronze.execution_logger import BronzeExecutionLogger
 from src.bronze.quality_logger import BronzeQualityLogger
 from src.core.retry import execute_with_retry
+from src.bronze.manifest import BronzeProcessedManifest
 
+processed_manifest_df = BronzeProcessedManifest.load()
+manifest_records = []
 
 def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
     """
@@ -21,12 +24,14 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
     - retorna apenas a execução atual;
     - persiste histórico acumulado no bronze_execution_log.csv.
     """
-
+    
     landing_metadata_df = pd.read_csv(Settings.LANDING_METADATA_PATH)
 
     existing_log_df = BronzeExecutionLogger.load_existing_log()
     execution_id = BronzeExecutionLogger.generate_execution_id()
     pipeline = BronzePipeline()
+    
+    
 
     results = []
     quality_records = []
@@ -42,13 +47,15 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
             source_type = BronzeCatalog.get_source_type(source_file)
             dataset_name = BronzeCatalog.get_dataset_name(source_file)
 
-            already_processed = BronzeExecutionLogger.was_successfully_processed(
-                existing_log_df=existing_log_df,
+            
+            already_processed = BronzeProcessedManifest.was_processed(
+                manifest_df=processed_manifest_df,
                 source_file=source_file,
                 snapshot_date=snapshot_date,
                 file_hash=file_hash,
             )
-
+            
+            
             if already_processed and not force_reprocess:
                 end_time = datetime.now(timezone.utc)
 
@@ -131,6 +138,19 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
                     error_message=None,
                 )
             )
+            
+             
+            manifest_records.append(
+                BronzeProcessedManifest.build_record(
+                    source_file=source_file,
+                    snapshot_date=snapshot_date,
+                    source_type=source_type,
+                    dataset_name=dataset_name,
+                    file_hash=file_hash,
+                    bronze_path=output_path,
+                    pipeline_version=Settings.BRONZE_PIPELINE_VERSION,
+                )
+            )
 
         except Exception as error:
             end_time = datetime.now(timezone.utc)
@@ -155,5 +175,6 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
 
     BronzeExecutionLogger.append_execution_log(current_run_df)
     BronzeQualityLogger.append_quality_log(quality_records)
+    BronzeProcessedManifest.upsert(manifest_records)
 
     return current_run_df
