@@ -7,6 +7,7 @@ from src.bronze.catalog import BronzeCatalog
 from src.bronze.pipeline import BronzePipeline
 from src.bronze.execution_logger import BronzeExecutionLogger
 from src.bronze.quality_logger import BronzeQualityLogger
+from src.core.retry import execute_with_retry
 
 
 def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
@@ -68,8 +69,24 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
                 )
 
                 continue
+            """
+            A escrita na Bronze depende de Spark + MinIO + IO local.
 
-            output_path = pipeline.run(
+            Em ambiente distribuído, falhas temporárias podem ocorrer:
+            - executor indisponível;
+            - timeout de escrita;
+            - problema temporário no object storage;
+            - erro transitório de rede.
+
+            Por isso encapsulamos a execução com retry automático
+            antes de marcar o arquivo como FAILED.
+            """
+
+            output_path = execute_with_retry(
+                operation=pipeline.run,
+                max_retries=Settings.BRONZE_MAX_RETRIES,
+                delay_seconds=Settings.BRONZE_RETRY_DELAY_SECONDS,
+
                 source_path=row["source_path"],
                 source_type=source_type,
                 dataset_name=dataset_name,
@@ -77,6 +94,7 @@ def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
                 source_file=source_file,
                 file_hash=file_hash,
             )
+            
 
             end_time = datetime.now(timezone.utc)
 

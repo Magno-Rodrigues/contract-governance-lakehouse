@@ -95,6 +95,7 @@ class BronzeExecutionLogger:
         end_time: datetime,
         bronze_path: Optional[str] = None,
         error_message: Optional[str] = None,
+        retry_count: int = 0,
     ) -> dict:
         """
         Monta um registro padronizado de execução por arquivo.
@@ -114,6 +115,7 @@ class BronzeExecutionLogger:
             "duration_seconds": duration_seconds,
             "bronze_path": bronze_path,
             "error_message": error_message,
+            "retry_count": retry_count,
         }
 
     @staticmethod

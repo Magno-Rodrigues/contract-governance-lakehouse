@@ -70,3 +70,7 @@ class Settings:
 
     # Pipeline versions
     BRONZE_PIPELINE_VERSION = "bronze_v1"
+    
+    # Pipeline retries
+    BRONZE_MAX_RETRIES = 3
+    BRONZE_RETRY_DELAY_SECONDS = 2
