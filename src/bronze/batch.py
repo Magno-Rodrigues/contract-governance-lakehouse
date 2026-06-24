@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+
 import pandas as pd
 
 from src.config.settings import Settings
@@ -7,23 +8,23 @@ from src.bronze.pipeline import BronzePipeline
 from src.bronze.execution_logger import BronzeExecutionLogger
 
 
-def run_bronze_batch() -> pd.DataFrame:
+def run_bronze_batch(force_reprocess: bool = False) -> pd.DataFrame:
     """
     Executa ingestão Bronze em lote usando landing_metadata.csv.
 
-    A função:
-    - lê metadados da Landing;
-    - gera execution_id único para o batch;
-    - identifica source_type;
-    - resolve dataset_name;
-    - executa BronzePipeline para cada arquivo;
-    - registra sucesso/falha por arquivo.
+    Regras:
+    - lê todos os arquivos registrados na Landing;
+    - pula arquivos já processados com mesmo hash, salvo force_reprocess=True;
+    - registra SUCCESS, FAILED ou SKIPPED por arquivo;
+    - retorna apenas a execução atual;
+    - persiste histórico acumulado no bronze_execution_log.csv.
     """
 
     landing_metadata_df = pd.read_csv(Settings.LANDING_METADATA_PATH)
 
-    pipeline = BronzePipeline()
+    existing_log_df = BronzeExecutionLogger.load_existing_log()
     execution_id = BronzeExecutionLogger.generate_execution_id()
+    pipeline = BronzePipeline()
 
     results = []
 
@@ -32,10 +33,39 @@ def run_bronze_batch() -> pd.DataFrame:
 
         source_file = row["source_file"]
         snapshot_date = row["snapshot_date"]
+        file_hash = row["file_hash"]
 
         try:
-            source_type = BronzeCatalog.get_source_type(source_file=source_file)
-            dataset_name = BronzeCatalog.get_dataset_name(source_file=source_file)
+            source_type = BronzeCatalog.get_source_type(source_file)
+            dataset_name = BronzeCatalog.get_dataset_name(source_file)
+
+            already_processed = BronzeExecutionLogger.was_successfully_processed(
+                existing_log_df=existing_log_df,
+                source_file=source_file,
+                snapshot_date=snapshot_date,
+                file_hash=file_hash,
+            )
+
+            if already_processed and not force_reprocess:
+                end_time = datetime.now(timezone.utc)
+
+                results.append(
+                    BronzeExecutionLogger.build_execution_record(
+                        execution_id=execution_id,
+                        source_file=source_file,
+                        snapshot_date=snapshot_date,
+                        source_type=source_type,
+                        dataset_name=dataset_name,
+                        file_hash=file_hash,
+                        status="SKIPPED",
+                        start_time=start_time,
+                        end_time=end_time,
+                        bronze_path=None,
+                        error_message=None,
+                    )
+                )
+
+                continue
 
             output_path = pipeline.run(
                 source_path=row["source_path"],
@@ -43,68 +73,48 @@ def run_bronze_batch() -> pd.DataFrame:
                 dataset_name=dataset_name,
                 snapshot_date=snapshot_date,
                 source_file=source_file,
-                file_hash=row["file_hash"],
+                file_hash=file_hash,
             )
 
             end_time = datetime.now(timezone.utc)
 
-            execution_record = BronzeExecutionLogger.build_execution_record(
-                execution_id=execution_id,
-                source_file=source_file,
-                dataset_name=dataset_name,
-                bronze_status="SUCCESS",
-                start_time=start_time,
-                end_time=end_time,
-                error_message=None,
+            results.append(
+                BronzeExecutionLogger.build_execution_record(
+                    execution_id=execution_id,
+                    source_file=source_file,
+                    snapshot_date=snapshot_date,
+                    source_type=source_type,
+                    dataset_name=dataset_name,
+                    file_hash=file_hash,
+                    status="SUCCESS",
+                    start_time=start_time,
+                    end_time=end_time,
+                    bronze_path=output_path,
+                    error_message=None,
+                )
             )
-
-            execution_record.update(
-                {
-                    "snapshot_date": snapshot_date,
-                    "source_type": source_type,
-                    "bronze_path": output_path,
-                }
-            )
-
-            results.append(execution_record)
 
         except Exception as error:
             end_time = datetime.now(timezone.utc)
 
-            execution_record = BronzeExecutionLogger.build_execution_record(
-                execution_id=execution_id,
-                source_file=source_file,
-                dataset_name=None,
-                bronze_status="FAILED",
-                start_time=start_time,
-                end_time=end_time,
-                error_message=str(error),
+            results.append(
+                BronzeExecutionLogger.build_execution_record(
+                    execution_id=execution_id,
+                    source_file=source_file,
+                    snapshot_date=snapshot_date,
+                    source_type=None,
+                    dataset_name=None,
+                    file_hash=file_hash,
+                    status="FAILED",
+                    start_time=start_time,
+                    end_time=end_time,
+                    bronze_path=None,
+                    error_message=str(error),
+                )
             )
 
-            execution_record.update(
-                {
-                    "snapshot_date": snapshot_date,
-                    "source_type": None,
-                    "bronze_path": None,
-                }
-            )
+    current_run_df = pd.DataFrame(results)
 
-            results.append(execution_record)
+    BronzeExecutionLogger.append_execution_log(current_run_df)
 
-        # Converte lista de resultados em DataFrame final.
-        result_df = pd.DataFrame(results)
-
-        # Garante existência da pasta data/.
-        Settings.BRONZE_EXECUTION_LOG_PATH.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        # Persiste log local de execução.
-        result_df.to_csv(
-            Settings.BRONZE_EXECUTION_LOG_PATH,
-            index=False,
-            encoding="utf-8",
-        )
-
-        return result_df
+    return current_run_df
