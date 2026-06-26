@@ -1,0 +1,1 @@
+External sources with unstable schema must pass through Canonical Layer before Silver.
