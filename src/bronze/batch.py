@@ -262,7 +262,10 @@ def _process_file(
 
     try:
         source_type = BronzeCatalog.get_source_type(source_file)
-        dataset_name = BronzeCatalog.get_dataset_name(source_file)
+        dataset_name = BronzeCatalog.get_dataset_name(
+            source_file=source_file,
+            source_path=row["source_path"],
+        )
 
         if (
             not force_reprocess

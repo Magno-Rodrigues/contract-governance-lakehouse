@@ -35,22 +35,33 @@ class BronzeCatalog:
 
         raise ValueError(f"Extensão não suportada: {extension}")
 
+    
+    
     @classmethod
-    def get_dataset_name(cls, source_file: str) -> str:
+    def get_dataset_name(
+        cls,
+        source_file: str,
+        source_path: str = None,
+    ) -> str:
         """
-        Resolve nome técnico do dataset Bronze.
+        Resolve o dataset Bronze.
+
+        A pasta NACT define o domínio do dado.
+        Isso é mais robusto que depender do nome ou extensão do arquivo,
+        pois o fornecedor pode mudar layout, padrão de nome e formato.
         """
+
+        normalized_path = str(source_path or "").replace("\\", "/").upper()
+
+        if "/NACT/" in normalized_path:
+            return "nact"
 
         if source_file.startswith("QEC_"):
             return "qec"
 
-        if source_file.endswith("_ADMIN.xlsb"):
-            return "nact"
-
         if source_file in cls.DATASET_MAPPING:
             return cls.DATASET_MAPPING[source_file]
 
-        # Fallback técnico para arquivos ainda não mapeados.
         return (
             Path(source_file)
             .stem

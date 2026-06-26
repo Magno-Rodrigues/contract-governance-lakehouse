@@ -94,18 +94,18 @@ def test_get_dataset_name_qec():
 
 def test_get_dataset_name_nact():
     """
-    Valida identificação do dataset NACT.
+    Valida que arquivos dentro da pasta NACT pertencem ao dataset nact.
 
-    O dataset NACT é tratado de forma especial
-    no projeto porque não pertence ao SGC
-    e pode sofrer mudanças frequentes de layout.
+    A regra correta é baseada no domínio/pasta de negócio, não no nome
+    nem na extensão do arquivo.
     """
 
-    result = BronzeCatalog.get_dataset_name(
-        "202211_ADMIN.xlsb"
+    dataset_name = BronzeCatalog.get_dataset_name(
+        source_file="2024-02-Monitoramento_Mensal_Consolidado.xlsx",
+        source_path="/app/data/raw_local/RAW/2024-02-01_0800/NACT/2024-02-Monitoramento_Mensal_Consolidado.xlsx",
     )
 
-    assert result == "nact"
+    assert dataset_name == "nact"
 
 
 def test_get_dataset_name_known_file():
